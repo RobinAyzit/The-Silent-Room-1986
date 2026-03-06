@@ -6,7 +6,7 @@
 
 ---
 
-<img width="800" alt="The Silent Room 1986" src="https://raw.githubusercontent.com/RobinAyzit/The-Silent-Room-1986/gh-pages/logo.png" />
+<img width="800" alt="The Silent Room 1986" src="https://raw.githubusercontent.com/RobinAyzit/The-Silent-Room-1986/master/logo.png" />
 
 ---
 
