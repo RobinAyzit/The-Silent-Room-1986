@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, Shield, Zap, Wind, Droplets, Sun, Lock, Unlock, AlertTriangle, BookOpen, Flame, Snowflake, Ghost } from 'lucide-react';
+import { 
+  Terminal, Shield, Zap, Wind, Droplets, Sun, Lock, Unlock, 
+  AlertTriangle, BookOpen, Flame, Snowflake, Ghost, EyeOff, 
+  Languages, Search, Fingerprint, Skull, MapPin, User
+} from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import confetti from 'canvas-confetti';
@@ -9,9 +13,11 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// --- Constants & Types ---
+// --- Types & Constants ---
 
-export type ManifestationType = 'rain' | 'light' | 'heavy' | 'wall' | 'tangle' | 'open' | 'heat' | 'cold' | 'ghost' | 'fire' | 'gravity' | 'shield' | 'time';
+type Language = 'en' | 'sv' | 'tr';
+
+export type ManifestationType = 'rain' | 'light' | 'heavy' | 'wall' | 'tangle' | 'open' | 'heat' | 'cold' | 'ghost' | 'fire' | 'gravity' | 'shield' | 'time' | 'blood' | 'mirror';
 
 interface Manifestation {
   id: string;
@@ -24,7 +30,7 @@ interface Manifestation {
 
 interface Enemy {
   id: string;
-  type: 'standard' | 'hacker' | 'heavy';
+  type: 'standard' | 'hacker' | 'heavy' | 'censor' | 'infiltrator';
   x: number;
   y: number;
   health: number;
@@ -35,9 +41,9 @@ interface Enemy {
 }
 
 interface Upgrades {
-  oiledKeys: number; // Reduces error penalty/increases speed
-  magicRibbon: number; // Manifestation duration
-  soundProofing: number; // Enemy spawn delay
+  oiledKeys: number;
+  magicRibbon: number;
+  soundProofing: number;
 }
 
 interface Chapter {
@@ -49,61 +55,218 @@ interface Chapter {
   isBoss?: boolean;
 }
 
-const CHAPTERS: Chapter[] = [
-  {
-    id: 1,
-    title: "The Silent Room",
-    text: "The walls have ears, but the ink has teeth. I sit in the dark, typing what they fear most. The truth is a heavy burden, but today, it will be a heavy hammer. I can feel the rain outside, but soon, it will be inside too. Open the drawers of history.",
-    goal: "Type the forbidden article to manifest the truth.",
-    manifestationWords: {
-      "rain": "rain",
-      "heavy": "heavy",
-      "light": "light",
-      "open": "open"
-    }
+const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Chapter[] }> = {
+  en: {
+    ui: {
+      points: "Revolution Points",
+      accuracy: "Accuracy",
+      progress: "Case Progress",
+      initialize: "Start Investigation",
+      upgrades: "Upgrades",
+      restart: "Restart Case",
+      next: "Next Chapter",
+      victory: "Case Closed",
+      gameover: "Investigation Terminated",
+      typewriterMods: "Typewriter Modifications",
+      return: "Return to Case",
+      maxed: "Maxed",
+      upgrade: "Upgrade",
+      chapter: "Chapter",
+      forbidden: "Classified File",
+      audio: "Audio",
+      active: "Active",
+      initAudio: "Click to enable",
+      langName: "English",
+      detective: "Detective",
+      truth: "The Truth",
+      wrongGuess: "The Wrong Man",
+    },
+    chapters: [
+      {
+        id: 1,
+        title: "The Body",
+        goal: "Investigate the crime scene.",
+        text: "The rain washes the blood from the pavement. I found the body in room 402. It was cold, like the silence of the city.",
+        manifestationWords: { "rain": "rain", "blood": "fire", "body": "ghost", "cold": "cold" }
+      },
+      {
+        id: 2,
+        title: "The Clue",
+        goal: "Find the missing evidence.",
+        text: "I need more light to see the ribbon. There is a strange smell in the air. A key was left behind in the dark.",
+        manifestationWords: { "light": "light", "key": "open", "dark": "ghost", "smell": "tangle" }
+      },
+      {
+        id: 3,
+        title: "The Witness",
+        goal: "Interrogate the neighbor.",
+        text: "The neighbor is like a ghost. She saw a shadow on the wall. We need to talk about what happened that night.",
+        manifestationWords: { "ghost": "ghost", "shadow": "wall", "wall": "wall", "talk": "time" }
+      },
+      {
+        id: 4,
+        title: "The Pursuit",
+        goal: "Chase the suspect.",
+        text: "He is fast, moving through the street. Every wall is a barrier. The city is a maze of ink and steel.",
+        manifestationWords: { "fast": "time", "street": "gravity", "wall": "wall", "ink": "rain" }
+      },
+      {
+        id: 5,
+        title: "The Wrong Man",
+        goal: "Corner the suspect.",
+        text: "The fire burns in his eyes. I will lock the door. This trap is set for the landlord. He must be the killer.",
+        manifestationWords: { "fire": "fire", "lock": "shield", "trap": "tangle", "killer": "heavy" }
+      },
+      {
+        id: 6,
+        title: "The Verdict",
+        goal: "Face the ultimate truth.",
+        text: "The truth is hidden in the mirror. This is the end of the story. The ink reveals my own face. I was the one.",
+        manifestationWords: { "truth": "light", "mirror": "shield", "end": "gravity", "ink": "rain" }
+      }
+    ]
   },
-  {
-    id: 2,
-    title: "The Knock at the Door",
-    text: "They are here. The boots on the stairs are rhythmic, like a heartbeat of lead. I must defend this sanctuary. If I type 'wall', the air will solidify. If I type 'tangle', the floor will betray them. The revolution starts in this small room. Heat the air until it burns with fire.",
-    goal: "Defend your apartment from the Secret Police.",
-    manifestationWords: {
-      "wall": "wall",
-      "tangle": "tangle",
-      "light": "light",
-      "heat": "heat",
-      "fire": "fire"
-    }
+  sv: {
+    ui: {
+      points: "Revolutionspoäng",
+      accuracy: "Träffsäkerhet",
+      progress: "Fallframsteg",
+      initialize: "Starta Utredning",
+      upgrades: "Uppgraderingar",
+      restart: "Starta om fallet",
+      next: "Nästa kapitel",
+      victory: "Fallet Avslutat",
+      gameover: "Utredning Avbruten",
+      typewriterMods: "Skrivmaskinsmodifieringar",
+      return: "Återgå till fallet",
+      maxed: "Maxad",
+      upgrade: "Uppgradera",
+      chapter: "Kapitel",
+      forbidden: "Klassificerad fil",
+      audio: "Ljud",
+      active: "Aktivt",
+      initAudio: "Klicka för att aktivera",
+      langName: "Svenska",
+      detective: "Detektiv",
+      truth: "Sanningen",
+      wrongGuess: "Fel Man",
+    },
+    chapters: [
+      {
+        id: 1,
+        title: "Kroppen",
+        goal: "Undersök brottsplatsen.",
+        text: "Regnet tvättar blodet från trottoaren. Jag hittade kroppen i rum 402. Den var kall, som stadens tystnad.",
+        manifestationWords: { "regn": "rain", "blod": "fire", "kropp": "ghost", "kall": "cold" }
+      },
+      {
+        id: 2,
+        title: "Ledtråden",
+        goal: "Hitta det saknade beviset.",
+        text: "Jag behöver mer ljus för att se bandet. Det finns en konstig lukt i luften. En nyckel lämnades kvar i mörkret.",
+        manifestationWords: { "ljus": "light", "nyckel": "open", "mörker": "ghost", "lukt": "tangle" }
+      },
+      {
+        id: 3,
+        title: "Vittnet",
+        goal: "Förhör grannen.",
+        text: "Grannen är som ett spöke. Hon såg en skugga på väggen. Vi måste prata om vad som hände den natten.",
+        manifestationWords: { "spöke": "ghost", "skugga": "wall", "vägg": "wall", "prata": "time" }
+      },
+      {
+        id: 4,
+        title: "Jakten",
+        goal: "Jaga den misstänkte.",
+        text: "Han är snabb, rör sig genom gatan. Varje vägg är ett hinder. Staden är en labyrint av bläck och stål.",
+        manifestationWords: { "snabb": "time", "gata": "gravity", "vägg": "wall", "bläck": "rain" }
+      },
+      {
+        id: 5,
+        title: "Fel Man",
+        goal: "Hörna den misstänkte.",
+        text: "Elden brinner i hans ögon. Jag ska låsa dörren. Denna fälla är satt för hyresvärden. Han måste vara mördaren.",
+        manifestationWords: { "eld": "fire", "lås": "shield", "fälla": "tangle", "mördare": "heavy" }
+      },
+      {
+        id: 6,
+        title: "Domen",
+        goal: "Möt den ultimata sanningen.",
+        text: "Sanningen är gömd i spegeln. Detta är slutet på historien. Bläcket avslöjar mitt eget ansikte. Det var jag.",
+        manifestationWords: { "sanning": "light", "spegel": "shield", "slut": "gravity", "bläck": "rain" }
+      }
+    ]
   },
-  {
-    id: 3,
-    title: "The Great Broadcast",
-    text: "The city is watching. Every word I type is projected onto the Ministry's walls. We are ghosts in the machine, cold as the winter wind, but bright as a thousand suns. The wall is falling. The rain is washing away the lies. Gravity fails them now. We are free.",
-    goal: "Complete the final broadcast to ignite the revolution.",
-    manifestationWords: {
-      "ghost": "ghost",
-      "cold": "cold",
-      "light": "light",
-      "wall": "wall",
-      "rain": "rain",
-      "gravity": "gravity"
-    }
-  },
-  {
-    id: 4,
-    title: "The Ministry Breach",
-    text: "We have entered the heart of the beast. The Grand Censor awaits. We must use every shield of truth, every second of time we can steal. The fire of liberty will consume their paper walls. This is the end of the silence. The world is open.",
-    goal: "Defeat the Grand Censor in the heart of the Ministry.",
-    isBoss: true,
-    manifestationWords: {
-      "shield": "shield",
-      "time": "time",
-      "fire": "fire",
-      "open": "open",
-      "light": "light"
-    }
+  tr: {
+    ui: {
+      points: "Devrim Puanları",
+      accuracy: "Doğruluk",
+      progress: "Vaka İlerlemesi",
+      initialize: "Soruşturmayı Başlat",
+      upgrades: "Geliştirmeler",
+      restart: "Vakayı Yeniden Başlat",
+      next: "Sonraki Bölüm",
+      victory: "Vaka Çözüldü",
+      gameover: "Soruşturma Sonlandırıldı",
+      typewriterMods: "Daktilo Modifikasyonları",
+      return: "Vakaya Dön",
+      maxed: "Maksimum",
+      upgrade: "Geliştir",
+      chapter: "Bölüm",
+      forbidden: "Gizli Dosya",
+      audio: "Ses",
+      active: "Aktif",
+      initAudio: "Etkinleştirmek için tıkla",
+      langName: "Türkçe",
+      detective: "Dedektif",
+      truth: "Gerçek",
+      wrongGuess: "Yanlış Adam",
+    },
+    chapters: [
+      {
+        id: 1,
+        title: "Ceset",
+        goal: "Olay yerini incele.",
+        text: "Yağmur kaldırımdaki kanı yıkıyor. Cesedi 402 numaralı odada buldum. Şehrin sessizliği gibi soğuktu.",
+        manifestationWords: { "yağmur": "rain", "kan": "fire", "ceset": "ghost", "soğuk": "cold" }
+      },
+      {
+        id: 2,
+        title: "İpucu",
+        goal: "Eksik kanıtı bul.",
+        text: "Şeridi görmek için daha fazla ışığa ihtiyacım var. Havada garip bir koku var. Karanlıkta bir anahtar bırakılmış.",
+        manifestationWords: { "ışık": "light", "anahtar": "open", "karanlık": "ghost", "koku": "tangle" }
+      },
+      {
+        id: 3,
+        title: "Tanık",
+        goal: "Komşuyu sorgula.",
+        text: "Komşu bir hayalet gibi. Duvarda bir gölge gördü. O gece neler olduğu hakkında konuşmamız lazım.",
+        manifestationWords: { "hayalet": "ghost", "gölge": "wall", "duvar": "wall", "konuş": "time" }
+      },
+      {
+        id: 4,
+        title: "Takip",
+        goal: "Şüpheliyi kovala.",
+        text: "Hızlı, sokakta ilerliyor. Her duvar bir engel. Şehir bir mürekkep ve çelik labirenti.",
+        manifestationWords: { "hızlı": "time", "sokak": "gravity", "duvar": "wall", "mürekkep": "rain" }
+      },
+      {
+        id: 5,
+        title: "Yanlış Adam",
+        goal: "Şüpheliyi köşeye sıkıştır.",
+        text: "Gözlerinde ateş yanıyor. Kapıyı kilitleyeceğim. Bu tuzak ev sahibi için kuruldu. Katil o olmalı.",
+        manifestationWords: { "ateş": "fire", "kilit": "shield", "tuzak": "tangle", "katil": "heavy" }
+      },
+      {
+        id: 6,
+        title: "Karar",
+        goal: "Nihai gerçekle yüzleş.",
+        text: "Gerçek aynada gizli. Bu hikayenin sonu. Mürekkep kendi yüzümü ortaya çıkarıyor. O bendim.",
+        manifestationWords: { "gerçek": "light", "ayna": "shield", "son": "gravity", "mürekkep": "rain" }
+      }
+    ]
   }
-];
+};
 
 // --- Components ---
 
@@ -115,7 +278,22 @@ const CRTOverlay = () => (
   </div>
 );
 
+const GlitchEffect = ({ active }: { active: boolean }) => (
+  <AnimatePresence>
+    {active && (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.5, 0, 0.3, 0] }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2, repeat: Infinity }}
+        className="fixed inset-0 z-40 bg-red-500/10 pointer-events-none mix-blend-overlay"
+      />
+    )}
+  </AnimatePresence>
+);
+
 export default function Game() {
+  const [lang, setLang] = useState<Language>('en');
   const [chapterIndex, setChapterIndex] = useState(0);
   const [typedText, setTypedText] = useState("");
   const [manifestations, setManifestations] = useState<Manifestation[]>([]);
@@ -136,7 +314,8 @@ export default function Game() {
     soundProofing: 0
   });
   
-  const chapter = CHAPTERS[chapterIndex];
+  const t = TRANSLATIONS[lang];
+  const chapter = t.chapters[chapterIndex];
 
   // Audio Logic
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -151,103 +330,57 @@ export default function Game() {
     return audioCtxRef.current;
   }, []);
 
-  const playClick = useCallback(() => {
+  const playSound = useCallback((type: 'click' | 'bell' | 'backspace' | 'glitch') => {
     const ctx = initAudio();
     const now = ctx.currentTime;
 
-    // 1. Mechanical "Click" (Noise burst)
-    const bufferSize = ctx.sampleRate * 0.05;
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1;
+    if (type === 'click') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(150 + Math.random() * 50, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.06);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.06);
+    } else if (type === 'bell') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } else if (type === 'backspace') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(80, now);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'glitch') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(20, now);
+      osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
     }
-
-    const noiseSource = ctx.createBufferSource();
-    noiseSource.buffer = noiseBuffer;
-
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'bandpass';
-    noiseFilter.frequency.setValueAtTime(2800 + Math.random() * 400, now);
-    noiseFilter.Q.setValueAtTime(1.5, now);
-
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.12, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-
-    noiseSource.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-
-    // 2. Metallic "Clack" (Filtered Square/Saw)
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
-    const oscFilter = ctx.createBiquadFilter();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(150 + Math.random() * 50, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.06);
-
-    oscFilter.type = 'lowpass';
-    oscFilter.frequency.setValueAtTime(800, now);
-
-    oscGain.gain.setValueAtTime(0.08, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-
-    osc.connect(oscFilter);
-    oscFilter.connect(oscGain);
-    oscGain.connect(ctx.destination);
-
-    noiseSource.start(now);
-    osc.start(now);
-    osc.stop(now + 0.06);
-  }, [initAudio]);
-
-  const playBell = useCallback(() => {
-    const ctx = initAudio();
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(1150, now + 0.6);
-
-    filter.type = 'highpass';
-    filter.frequency.setValueAtTime(1000, now);
-
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.6);
-  }, [initAudio]);
-
-  const playBackspace = useCallback(() => {
-    const ctx = initAudio();
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(80, now);
-    osc.frequency.linearRampToValueAtTime(40, now + 0.1);
-
-    gain.gain.setValueAtTime(0.05, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.1);
   }, [initAudio]);
 
   // Handle Manifestations
@@ -265,61 +398,34 @@ export default function Game() {
     setShake(15);
     setTimeout(() => setShake(0), 150);
 
-    // Global Effects
     if (type === 'light') {
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#f27d26', '#ffffff', '#ffcc00']
-      });
       setEnemies(prev => prev.map(e => ({ ...e, state: 'stunned' })));
-      setTimeout(() => {
-        setEnemies(prev => prev.map(e => ({ ...e, state: 'marching' })));
-      }, 3000);
+      setTimeout(() => setEnemies(prev => prev.map(e => ({ ...e, state: 'marching' }))), 3000);
     }
-
-    if (type === 'heavy') {
-      setIsHeavy(true);
-      setTimeout(() => setIsHeavy(false), 4000);
+    if (type === 'rain') {
+      confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 }, colors: ['#60a5fa'] });
     }
-
+    if (type === 'fire') {
+      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 100 })));
+    }
     if (type === 'cold') {
       setIsCold(true);
       setTimeout(() => setIsCold(false), 4000);
     }
-
-    if (type === 'heat') {
-      setIsHeat(true);
-      setTimeout(() => setIsHeat(false), 4000);
-    }
-
-    if (type === 'tangle') {
-      setEnemies(prev => prev.map(e => ({ ...e, speed: e.speed * 0.5 })));
-    }
-
     if (type === 'wall') {
-      setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 15) })));
+      setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 20) })));
     }
-
-    if (type === 'fire') {
-      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 40 })));
+    if (type === 'time') {
+      setIsTimeSlowed(true);
+      setTimeout(() => setIsTimeSlowed(false), 5000);
     }
-
     if (type === 'gravity') {
       setIsGravity(true);
-      setEnemies(prev => prev.map(e => ({ ...e, state: 'stunned' })));
       setTimeout(() => setIsGravity(false), 3000);
     }
-
     if (type === 'shield') {
       setIsShielded(true);
       setTimeout(() => setIsShielded(false), 5000);
-    }
-
-    if (type === 'time') {
-      setIsTimeSlowed(true);
-      setTimeout(() => setIsTimeSlowed(false), 6000);
     }
   }, [upgrades.magicRibbon]);
 
@@ -329,13 +435,13 @@ export default function Game() {
       if (gameState !== 'playing') return;
       
       if (e.key === 'Backspace') {
-        playBackspace();
+        playSound('backspace');
         setTypedText(prev => prev.slice(0, -1));
         return;
       }
 
       if (e.key.length === 1) {
-        playClick();
+        playSound('click');
         const char = e.key;
         setTypedText(prev => {
           const next = prev + char;
@@ -354,86 +460,84 @@ export default function Game() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, chapter, triggerManifestation, playClick, playBackspace]);
+  }, [gameState, chapter, triggerManifestation, playSound, lang]);
 
   // Game Loop
   useEffect(() => {
     if (gameState !== 'playing') return;
 
     const interval = setInterval(() => {
-      // Clean up old manifestations
       setManifestations(prev => prev.filter(m => Date.now() - m.startTime < m.duration));
 
       // Move enemies
-      if (chapterIndex >= 1) {
-        setEnemies(prev => {
-          const next = prev.map(e => {
-            if (e.state === 'stunned') return e;
-            let moveSpeed = e.speed;
-            if (isTimeSlowed) moveSpeed *= 0.3;
-            return { ...e, x: e.x + moveSpeed };
-          }).filter(e => e.health > 0);
+      setEnemies(prev => {
+        const next = prev.map(e => {
+          if (e.state === 'stunned') return e;
+          let moveSpeed = e.speed;
+          if (isTimeSlowed) moveSpeed *= 0.3;
           
-          // Check for game over (enemy reached the desk)
-          if (!isShielded && next.some(e => e.x > 85)) {
-            setGameState('gameover');
-          }
-          
-          return next;
-        });
-
-        // Spawn enemies based on chapter difficulty
-        const spawnRate = (chapterIndex === 1 ? 0.015 : 0.025) * (1 - upgrades.soundProofing * 0.2);
-        if (Math.random() < spawnRate) {
-          const typeRoll = Math.random();
-          let type: Enemy['type'] = 'standard';
-          let health = 100;
-          let speed = 0.2 + Math.random() * 0.4;
-          let shielded = false;
-
-          if (chapterIndex >= 2 && typeRoll > 0.8) {
-            type = 'hacker';
-            speed = 0.15;
-          } else if (chapterIndex >= 3 && typeRoll > 0.6) {
-            type = 'heavy';
-            health = 250;
-            speed = 0.1;
-            shielded = true;
+          // Censor Effect: Deletes text if close
+          if (e.type === 'censor' && e.x > 78 && Math.random() < 0.04) {
+            setTypedText(t => t.slice(0, -1));
+            playSound('glitch');
           }
 
-          setEnemies(prev => [...prev, {
-            id: Math.random().toString(),
-            type,
-            x: 0,
-            y: Math.random() * 60 + 20,
-            health,
-            maxHealth: health,
-            speed,
-            state: 'marching',
-            shielded
-          }]);
+          return { ...e, x: e.x + moveSpeed };
+        }).filter(e => e.health > 0);
+        
+        if (!isShielded && next.some(e => e.x > 85)) {
+          setGameState('gameover');
+        }
+        
+        return next;
+      });
+
+      // Spawn enemies
+      const spawnRate = (0.005 + chapterIndex * 0.006) * (1 - upgrades.soundProofing * 0.2);
+      if (Math.random() < spawnRate) {
+        const typeRoll = Math.random();
+        let type: Enemy['type'] = 'standard';
+        let health = 80 + chapterIndex * 15;
+        let speed = 0.12 + (chapterIndex * 0.04) + Math.random() * 0.25;
+
+        // Introduce enemy types progressively
+        const activeCensors = enemies.filter(e => e.type === 'censor').length;
+        if (chapterIndex >= 4 && typeRoll > 0.85 && activeCensors < 2) {
+          type = 'censor';
+          speed = 0.1 + (chapterIndex * 0.015);
+          health = 120 + chapterIndex * 10;
+        } else if (chapterIndex >= 2 && typeRoll > 0.7) {
+          type = 'infiltrator';
+          speed = 0.18 + (chapterIndex * 0.025);
+        } else if (chapterIndex >= 3 && typeRoll > 0.5) {
+          type = 'heavy';
+          health = 180 + chapterIndex * 25;
+          speed = 0.07 + (chapterIndex * 0.01);
         }
 
-        // Hacker Effect
-        const activeHackers = enemies.filter(e => e.type === 'hacker' && e.state !== 'stunned').length;
-        setScrambleAmount(activeHackers * 0.2);
+        setEnemies(prev => [...prev, {
+          id: Math.random().toString(),
+          type,
+          x: 0,
+          y: Math.random() * 60 + 20,
+          health,
+          maxHealth: health,
+          speed,
+          state: 'marching'
+        }]);
       }
 
       // Check for victory
       if (typedText.length >= chapter.text.length) {
         setGameState('victory');
         setRevolutionPoints(prev => prev + (chapter.id * 100));
-        playBell();
-        confetti({
-          particleCount: 150,
-          spread: 100,
-          origin: { y: 0.5 }
-        });
+        playSound('bell');
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
       }
     }, 50);
 
     return () => clearInterval(interval);
-  }, [gameState, typedText, chapter, chapterIndex, isTimeSlowed, isShielded, upgrades.soundProofing, enemies.length, playBell]);
+  }, [gameState, typedText, chapter, chapterIndex, isTimeSlowed, isShielded, upgrades.soundProofing, playSound]);
 
   const buyUpgrade = (key: keyof Upgrades) => {
     const cost = (upgrades[key] + 1) * 150;
@@ -461,6 +565,7 @@ export default function Game() {
       isHeat && "bg-orange-950/20"
     )}>
       <CRTOverlay />
+      <GlitchEffect active={enemies.some(e => e.type === 'censor' && e.x > 70)} />
       
       {/* Background Room Layer */}
       <div 
@@ -470,38 +575,29 @@ export default function Game() {
         )}
         style={{ transform: `translate(${Math.random() * shake}px, ${Math.random() * shake}px)` }}
       >
-        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/darkroom/1920/1080?blur=10')] bg-cover opacity-20" />
+        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/detective/1920/1080?blur=10')] bg-cover opacity-10" />
         
         {/* Manifestations */}
         <AnimatePresence>
           {manifestations.map(m => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, scale: 0, rotate: -20 }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1, 
-                rotate: 0,
-                y: isGravity ? -200 : 0
-              }}
-              exit={{ opacity: 0, scale: 2, rotate: 20 }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1, y: isGravity ? -200 : 0 }}
+              exit={{ opacity: 0, scale: 2 }}
               className="absolute pointer-events-none"
               style={{ left: `${m.x}%`, top: `${m.y}%` }}
             >
               <div className="relative">
-                <div className="absolute inset-0 blur-xl bg-white/10 rounded-full" />
+                <div className="absolute inset-0 blur-xl bg-white/5 rounded-full" />
                 {m.type === 'rain' && <Droplets className="text-blue-400 w-12 h-12 animate-bounce" />}
                 {m.type === 'light' && <Sun className="text-yellow-200 w-24 h-24 animate-pulse blur-sm" />}
-                {m.type === 'heavy' && <Shield className="text-gray-500 w-16 h-16" />}
-                {m.type === 'wall' && <div className="w-6 h-40 bg-gray-800 border-2 border-gray-600 rounded shadow-[0_0_20px_rgba(255,255,255,0.1)]" />}
-                {m.type === 'tangle' && <Wind className="text-green-600 w-16 h-16 animate-spin" />}
-                {m.type === 'open' && <Unlock className="text-amber-400 w-12 h-12" />}
-                {m.type === 'heat' && <Flame className="text-orange-500 w-16 h-16 animate-pulse" />}
-                {m.type === 'cold' && <Snowflake className="text-blue-200 w-16 h-16 animate-spin-slow" />}
                 {m.type === 'ghost' && <Ghost className="text-white/40 w-20 h-20 animate-pulse" />}
                 {m.type === 'fire' && <Flame className="text-red-500 w-20 h-20 animate-bounce" />}
+                {m.type === 'wall' && <div className="w-6 h-40 bg-gray-800 border-2 border-gray-600 rounded" />}
+                {m.type === 'cold' && <Snowflake className="text-blue-200 w-16 h-16 animate-spin-slow" />}
                 {m.type === 'shield' && <div className="w-32 h-32 border-4 border-blue-400/30 rounded-full animate-pulse" />}
-                {m.type === 'time' && <Zap className="text-purple-400 w-16 h-16 animate-spin" />}
+                {m.type === 'open' && <Unlock className="text-amber-400 w-12 h-12" />}
               </div>
             </motion.div>
           ))}
@@ -516,17 +612,16 @@ export default function Game() {
             animate={{ y: isGravity ? -300 : 0 }}
           >
             <div className={cn(
-              "p-2 bg-red-900/60 border border-red-500 rounded text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]",
-              e.state === 'stunned' && "animate-pulse brightness-150 scale-110",
-              e.type === 'hacker' && "bg-purple-900/60 border-purple-500 text-purple-500",
+              "p-2 bg-red-900/40 border border-red-500/50 rounded text-red-500 shadow-lg",
+              e.state === 'stunned' && "animate-pulse brightness-150",
+              e.type === 'censor' && "bg-blue-900/40 border-blue-500 text-blue-500",
+              e.type === 'infiltrator' && "bg-purple-900/40 border-purple-500 text-purple-500",
               e.type === 'heavy' && "bg-gray-900/80 border-gray-400 text-gray-400 scale-125"
             )}>
-              {e.type === 'standard' && <AlertTriangle className="w-8 h-8" />}
-              {e.type === 'hacker' && <Terminal className="w-8 h-8" />}
-              {e.type === 'heavy' && <Shield className="w-10 h-10" />}
-              <span className="text-[8px] uppercase font-bold">
-                {e.type === 'standard' ? 'POLICE' : e.type === 'hacker' ? 'HACKER' : 'HEAVY'}
-              </span>
+              {e.type === 'standard' && <AlertTriangle className="w-6 h-6" />}
+              {e.type === 'censor' && <EyeOff className="w-6 h-6" />}
+              {e.type === 'infiltrator' && <Fingerprint className="w-6 h-6" />}
+              {e.type === 'heavy' && <Shield className="w-8 h-8" />}
             </div>
             <div className="w-full h-1 bg-gray-800 mt-1 rounded-full overflow-hidden">
               <div className="h-full bg-red-500" style={{ width: `${(e.health / e.maxHealth) * 100}%` }} />
@@ -545,33 +640,38 @@ export default function Game() {
         <div className="flex justify-between items-start mb-12 border-b border-white/10 pb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-[#f27d26] rounded flex items-center justify-center text-black">
-              <Terminal className="w-8 h-8" />
+              <Search className="w-8 h-8" />
             </div>
             <div>
               <h1 className="text-3xl font-display tracking-tighter text-[#f27d26] uppercase italic leading-none">
-                {chapter.title}
+                The Silent Room 1986
               </h1>
               <p className="text-[10px] opacity-50 uppercase tracking-[0.3em] mt-2 font-bold">
-                Chapter {chapter.id} // Forbidden Transmission // 1986.ALT
+                {t.ui.chapter} {chapter.id}: {chapter.title} // {t.ui.forbidden}
               </p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">Points: {revolutionPoints}</div>
-            <div className="text-[8px] opacity-30 uppercase font-bold tracking-widest mt-1">
-              Audio: {audioCtxRef.current?.state === 'running' ? 'Active' : 'Click "Initialize" to enable'}
-            </div>
-            <div className="flex gap-1 mt-2 justify-end">
-              {[1, 2, 3, 4, 5].map(i => (
-                <div 
-                  key={i} 
+          
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex gap-2">
+              {(['en', 'sv', 'tr'] as Language[]).map(l => (
+                <button 
+                  key={l}
+                  onClick={() => setLang(l)}
                   className={cn(
-                    "w-1 h-4 rounded-full",
-                    i <= 4 ? "bg-[#f27d26] animate-pulse" : "bg-white/10"
-                  )} 
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                />
+                    "px-2 py-1 text-[10px] border rounded transition-all",
+                    lang === l ? "bg-[#f27d26] text-black border-[#f27d26]" : "border-white/20 hover:border-white/50"
+                  )}
+                >
+                  {l.toUpperCase()}
+                </button>
               ))}
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">{t.ui.points}: {revolutionPoints}</div>
+              <div className="text-[8px] opacity-30 uppercase font-bold tracking-widest mt-1">
+                {t.ui.audio}: {audioCtxRef.current?.state === 'running' ? t.ui.active : t.ui.initAudio}
+              </div>
             </div>
           </div>
         </div>
@@ -589,9 +689,9 @@ export default function Game() {
                 <h2 className="text-2xl font-display uppercase italic text-white">{chapter.goal}</h2>
               </div>
               <p className="text-xl leading-relaxed opacity-80 mb-10 font-light">
-                {chapter.id === 1 ? "The Ministry of Truth is closing in. Your typewriter is the only weapon left." : "The revolution is spreading. Your words are the sparks."}
+                {chapter.id === 1 ? (lang === 'sv' ? "Staden sover, men brottet vilar aldrig. Din skrivmaskin är ditt enda vittne." : lang === 'tr' ? "Şehir uyuyor ama suç asla dinlenmez. Daktilon senin tek tanığın." : "The city sleeps, but crime never rests. Your typewriter is your only witness.") : (lang === 'sv' ? "Sanningen kommer fram, bokstav för bokstav." : lang === 'tr' ? "Gerçek ortaya çıkıyor, harf harf." : "The truth emerges, letter by letter.")}
                 <span className="block mt-4 text-[#f27d26] font-bold italic">
-                  "The ink is the seed, the word is the tree."
+                  "{lang === 'sv' ? "Bläcket ljuger aldrig." : lang === 'tr' ? "Mürekkep asla yalan söylemez." : "The ink never lies."}"
                 </span>
               </p>
               <div className="flex gap-4">
@@ -599,7 +699,7 @@ export default function Game() {
                   onClick={startChapter}
                   className="group relative flex-1 px-8 py-5 bg-[#f27d26] text-black font-black uppercase tracking-[0.2em] overflow-hidden rounded-lg hover:bg-white transition-all"
                 >
-                  <span className="relative z-10">Initialize Transmission</span>
+                  <span className="relative z-10">{t.ui.initialize}</span>
                   <div className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 </button>
                 {chapterIndex > 0 && (
@@ -607,7 +707,7 @@ export default function Game() {
                     onClick={() => setGameState('upgrading')}
                     className="px-8 py-5 bg-white/10 text-white font-black uppercase tracking-[0.2em] rounded-lg hover:bg-white/20 transition-all"
                   >
-                    Upgrades
+                    {t.ui.upgrades}
                   </button>
                 )}
               </div>
@@ -621,15 +721,15 @@ export default function Game() {
               className="bg-black/95 p-10 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl mx-auto w-full"
             >
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-display uppercase italic text-[#f27d26]">Typewriter Modifications</h2>
-                <div className="text-xl font-bold">Points: {revolutionPoints}</div>
+                <h2 className="text-3xl font-display uppercase italic text-[#f27d26]">{t.ui.typewriterMods}</h2>
+                <div className="text-xl font-bold">{t.ui.points}: {revolutionPoints}</div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 {[
-                  { id: 'oiledKeys', name: 'Oiled Keys', desc: 'Reduces error impact', icon: Zap },
-                  { id: 'magicRibbon', name: 'Magic Ribbon', desc: 'Longer manifestations', icon: Flame },
-                  { id: 'soundProofing', name: 'Sound Proofing', desc: 'Slower enemy spawns', icon: Shield },
+                  { id: 'oiledKeys', name: 'Oiled Keys', icon: Zap },
+                  { id: 'magicRibbon', name: 'Magic Ribbon', icon: Flame },
+                  { id: 'soundProofing', name: 'Sound Proofing', icon: Shield },
                 ].map((u) => {
                   const level = upgrades[u.id as keyof Upgrades];
                   const cost = (level + 1) * 150;
@@ -637,7 +737,6 @@ export default function Game() {
                     <div key={u.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center text-center">
                       <u.icon className="w-10 h-10 text-[#f27d26] mb-4" />
                       <h3 className="text-lg font-bold mb-2">{u.name}</h3>
-                      <p className="text-xs opacity-60 mb-4">{u.desc}</p>
                       <div className="flex gap-1 mb-6">
                         {[1, 2, 3].map(i => (
                           <div key={i} className={cn("w-4 h-1 rounded", i <= level ? "bg-[#f27d26]" : "bg-white/10")} />
@@ -646,9 +745,9 @@ export default function Game() {
                       <button 
                         onClick={() => buyUpgrade(u.id as keyof Upgrades)}
                         disabled={revolutionPoints < cost || level >= 3}
-                        className="w-full py-2 bg-white/10 rounded font-bold text-xs uppercase hover:bg-[#f27d26] hover:text-black disabled:opacity-30 disabled:hover:bg-white/10 disabled:hover:text-white transition-all"
+                        className="w-full py-2 bg-white/10 rounded font-bold text-xs uppercase hover:bg-[#f27d26] hover:text-black disabled:opacity-30 transition-all"
                       >
-                        {level >= 3 ? 'Maxed' : `Upgrade (${cost})`}
+                        {level >= 3 ? t.ui.maxed : `${t.ui.upgrade} (${cost})`}
                       </button>
                     </div>
                   );
@@ -659,22 +758,24 @@ export default function Game() {
                 onClick={() => setGameState('narrative')}
                 className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-lg hover:bg-[#f27d26] transition-all"
               >
-                Return to Mission
+                {t.ui.return}
               </button>
             </motion.div>
           )}
 
           {gameState === 'playing' && (
             <div className="space-y-12">
+              
               {/* Target Text Display */}
               <div className="text-3xl leading-[1.6] font-medium max-w-4xl mx-auto">
                 {chapter.text.split('').map((char, i) => {
                   let color = "text-white/10";
                   let decoration = "";
                   
-                  // Scramble effect
+                  // Scramble effect from Infiltrators
                   let displayChar = char;
-                  if (i > typedText.length && Math.random() < scrambleAmount) {
+                  const infiltrators = enemies.filter(e => e.type === 'infiltrator' && e.x > 50).length;
+                  if (i > typedText.length && Math.random() < infiltrators * 0.05) {
                     displayChar = String.fromCharCode(33 + Math.floor(Math.random() * 94));
                   }
 
@@ -699,28 +800,14 @@ export default function Game() {
                 })}
               </div>
 
-              {/* Typing Feedback / Input Area */}
+              {/* Typing Feedback */}
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-[#f27d26] to-amber-500 rounded-lg blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
                 <div className="relative h-32 bg-black/60 border border-white/10 p-6 rounded-lg flex items-center justify-center overflow-hidden">
                   <div className="text-5xl font-black tracking-[0.3em] text-white/5 uppercase select-none">
-                    {typedText.slice(-12) || "WAITING FOR INPUT"}
+                    {typedText.slice(-12) || "INVESTIGATING"}
                     <span className="animate-pulse text-[#f27d26]">_</span>
                   </div>
-                  {/* Floating particles for typing */}
-                  <AnimatePresence>
-                    {typedText.length > 0 && (
-                      <motion.div
-                        key={typedText.length}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: -40, opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute text-[#f27d26] font-bold text-xl"
-                      >
-                        {typedText.slice(-1)}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </div>
             </div>
@@ -730,16 +817,16 @@ export default function Game() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-red-950/90 p-12 border-4 border-red-500 text-center rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.4)] max-w-2xl mx-auto"
+              className="bg-red-950/90 p-12 border-4 border-red-500 text-center rounded-2xl shadow-2xl max-w-2xl mx-auto"
             >
-              <AlertTriangle className="w-24 h-24 text-red-500 mx-auto mb-6 animate-bounce" />
-              <h2 className="text-5xl font-display uppercase italic tracking-tighter mb-4 text-white">Transmission Failed</h2>
-              <p className="text-xl mb-10 opacity-80">The Secret Police have breached the perimeter. Your identity has been compromised.</p>
+              <Skull className="w-24 h-24 text-red-500 mx-auto mb-6 animate-bounce" />
+              <h2 className="text-5xl font-display uppercase italic tracking-tighter mb-4 text-white">{t.ui.gameover}</h2>
+              <p className="text-xl mb-10 opacity-80">{lang === 'sv' ? "Du kom för nära sanningen. Fallet är stängt för alltid." : lang === 'tr' ? "Gerçeğe çok yaklaştın. Vaka sonsuza dek kapandı." : "You got too close to the truth. The case is closed forever."}</p>
               <button 
                 onClick={startChapter}
                 className="w-full px-8 py-5 bg-red-500 text-white font-black uppercase tracking-widest hover:bg-white hover:text-red-500 transition-all rounded-lg"
               >
-                Restart Transmission
+                {t.ui.restart}
               </button>
             </motion.div>
           )}
@@ -748,25 +835,26 @@ export default function Game() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-green-950/90 p-12 border-4 border-green-500 text-center rounded-2xl shadow-[0_0_50px_rgba(34,197,94,0.4)] max-w-2xl mx-auto"
+              className="bg-green-950/90 p-12 border-4 border-green-500 text-center rounded-2xl shadow-2xl max-w-2xl mx-auto"
             >
-              <Zap className="w-24 h-24 text-green-500 mx-auto mb-6 animate-pulse" />
-              <h2 className="text-5xl font-display uppercase italic tracking-tighter mb-4 text-white">Success</h2>
-              <p className="text-xl mb-10 opacity-80">The broadcast was successful. The citizens are waking up.</p>
+              <Fingerprint className="w-24 h-24 text-green-500 mx-auto mb-6 animate-pulse" />
+              <h2 className="text-5xl font-display uppercase italic tracking-tighter mb-4 text-white">{t.ui.victory}</h2>
+              <p className="text-xl mb-10 opacity-80">
+                {chapter.id === 5 ? t.ui.wrongGuess : chapter.id === 6 ? t.ui.truth : t.ui.progress}
+              </p>
               <button 
                 onClick={() => {
-                  if (chapterIndex < CHAPTERS.length - 1) {
+                  if (chapterIndex < t.chapters.length - 1) {
                     setChapterIndex(prev => prev + 1);
                     setGameState('narrative');
                   } else {
-                    alert("THE REVOLUTION HAS BEGUN. WORDS ARE FREE.");
                     setChapterIndex(0);
                     setGameState('narrative');
                   }
                 }}
                 className="w-full px-8 py-5 bg-green-500 text-white font-black uppercase tracking-widest hover:bg-white hover:text-green-500 transition-all rounded-lg"
               >
-                {chapterIndex < CHAPTERS.length - 1 ? "Next Chapter" : "Restart Revolution"}
+                {chapterIndex < t.chapters.length - 1 ? t.ui.next : t.ui.restart}
               </button>
             </motion.div>
           )}
@@ -775,18 +863,18 @@ export default function Game() {
         {/* Footer Stats */}
         <div className="mt-12 grid grid-cols-4 gap-8 border-t border-white/10 pt-8">
           <div className="space-y-2">
-            <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">Manifestations</div>
-            <div className="text-3xl font-display italic text-[#f27d26]">{manifestations.length}</div>
+            <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">{t.ui.detective}</div>
+            <div className="text-3xl font-display italic text-[#f27d26] flex items-center gap-2">
+              <User className="w-6 h-6" /> {lang.toUpperCase()}
+            </div>
           </div>
           <div className="space-y-2">
-            <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">Accuracy</div>
-            <div className="text-3xl font-display italic text-white">
-              {typedText.length > 0 ? "98" : "0"}%
-            </div>
+            <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">{t.ui.accuracy}</div>
+            <div className="text-3xl font-display italic text-white">98%</div>
           </div>
           <div className="col-span-2 space-y-2">
             <div className="flex justify-between items-end">
-              <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">Broadcast Progress</div>
+              <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">{t.ui.progress}</div>
               <div className="text-[10px] font-bold text-[#f27d26]">
                 {Math.round((typedText.length / chapter.text.length) * 100)}%
               </div>
@@ -803,15 +891,15 @@ export default function Game() {
         </div>
       </div>
 
-      {/* Ambient Sound/Visuals */}
+      {/* Ambient Visuals */}
       <div className="fixed bottom-6 right-8 flex items-center gap-6 opacity-20 hover:opacity-100 transition-opacity">
         <div className="flex items-center gap-2">
-          <div className="w-1 h-1 bg-red-500 rounded-full animate-ping" />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Live Feed</span>
+          <MapPin className="w-3 h-3" />
+          <span className="text-[10px] uppercase font-bold tracking-widest">Room 402 // 1986</span>
         </div>
         <div className="flex items-center gap-2">
           <Shield className="w-3 h-3" />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Encryption: AES-256</span>
+          <span className="text-[10px] uppercase font-bold tracking-widest">Evidence: Secured</span>
         </div>
       </div>
     </div>
