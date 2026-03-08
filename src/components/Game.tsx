@@ -80,6 +80,13 @@ const KEYWORD_EFFECTS: Record<KeywordEffectType, string[]> = {
 
 const KEYWORD_COOLDOWN_MS = 1400;
 
+const normalizeForMatch = (value: string) =>
+  value
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
+
 const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Chapter[] }> = {
   en: {
     ui: {
@@ -153,24 +160,24 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
   },
   sv: {
     ui: {
-      points: "RevolutionspoÃ¤ng",
-      accuracy: "TrÃ¤ffsÃ¤kerhet",
+      points: "Revolutionspoäng",
+      accuracy: "Träffsäkerhet",
       progress: "Fallframsteg",
       initialize: "Starta Utredning",
       upgrades: "Uppgraderingar",
       restart: "Starta om fallet",
-      next: "NÃ¤sta kapitel",
+      next: "Nästa kapitel",
       victory: "Fallet Avslutat",
       gameover: "Utredning Avbruten",
       typewriterMods: "Skrivmaskinsmodifieringar",
-      return: "Ã…tergÃ¥ till fallet",
+      return: "Återgå till fallet",
       maxed: "Maxad",
       upgrade: "Uppgradera",
       chapter: "Kapitel",
       forbidden: "Klassificerad fil",
       audio: "Ljud",
       active: "Aktivt",
-      initAudio: "Klicka fÃ¶r att aktivera",
+      initAudio: "Klicka för att aktivera",
       langName: "Svenska",
       detective: "Detektiv",
       truth: "Sanningen",
@@ -180,114 +187,114 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       {
         id: 1,
         title: "Kroppen",
-        goal: "UndersÃ¶k brottsplatsen.",
-        text: "Regnet tvÃ¤ttar blodet frÃ¥n trottoaren. Jag hittade kroppen i rum 402. Den var kall, som stadens tystnad.",
+        goal: "Undersök brottsplatsen.",
+        text: "Regnet tvättar blodet från trottoaren. Jag hittade kroppen i rum 402. Den var kall, som stadens tystnad.",
         manifestationWords: { "regn": "rain", "blod": "blood", "kropp": "ghost", "kall": "cold" }
       },
       {
         id: 2,
-        title: "LedtrÃ¥den",
+        title: "Ledtråden",
         goal: "Hitta det saknade beviset.",
-        text: "Jag behÃ¶ver mer ljus fÃ¶r att se bandet. Det finns en konstig lukt i luften. En nyckel lÃ¤mnades kvar i mÃ¶rkret.",
-        manifestationWords: { "ljus": "light", "nyckel": "open", "mÃ¶rker": "ghost", "lukt": "tangle" }
+        text: "Jag behöver mer ljus för att se bandet. Det finns en konstig lukt i luften. En nyckel lämnades kvar i mörkret.",
+        manifestationWords: { "ljus": "light", "nyckel": "open", "mörker": "ghost", "lukt": "tangle" }
       },
       {
         id: 3,
         title: "Vittnet",
-        goal: "FÃ¶rhÃ¶r grannen.",
-        text: "Grannen Ã¤r som ett spÃ¶ke. Hon sÃ¥g en skugga pÃ¥ vÃ¤ggen. Vi mÃ¥ste prata om vad som hÃ¤nde den natten.",
-        manifestationWords: { "spÃ¶ke": "ghost", "skugga": "wall", "vÃ¤gg": "wall", "prata": "time" }
+        goal: "Förhör grannen.",
+        text: "Grannen är som ett spöke. Hon såg en skugga på väggen. Vi måste prata om vad som hände den natten.",
+        manifestationWords: { "spöke": "ghost", "skugga": "wall", "vägg": "wall", "prata": "time" }
       },
       {
         id: 4,
         title: "Jakten",
-        goal: "Jaga den misstÃ¤nkte.",
-        text: "Han Ã¤r snabb, rÃ¶r sig genom gatan. Varje vÃ¤gg Ã¤r ett hinder. Staden Ã¤r en labyrint av blÃ¤ck och stÃ¥l.",
-        manifestationWords: { "snabb": "time", "gata": "gravity", "vÃ¤gg": "wall", "blÃ¤ck": "rain" }
+        goal: "Jaga den misstänkte.",
+        text: "Han är snabb, rör sig genom gatan. Varje vägg är ett hinder. Staden är en labyrint av bläck och stål.",
+        manifestationWords: { "snabb": "time", "gata": "gravity", "vägg": "wall", "bläck": "rain" }
       },
       {
         id: 5,
         title: "Fel Man",
-        goal: "HÃ¶rna den misstÃ¤nkte.",
-        text: "Elden brinner i hans Ã¶gon. Jag ska lÃ¥sa dÃ¶rren. Denna fÃ¤lla Ã¤r satt fÃ¶r hyresvÃ¤rden. Han mÃ¥ste vara mÃ¶rdaren.",
-        manifestationWords: { "eld": "fire", "lÃ¥s": "shield", "fÃ¤lla": "tangle", "mÃ¶rdare": "heavy" }
+        goal: "Hörna den misstänkte.",
+        text: "Elden brinner i hans ögon. Jag ska låsa dörren. Denna fälla är satt för hyresvärden. Han måste vara mördaren.",
+        manifestationWords: { "eld": "fire", "lås": "shield", "fälla": "tangle", "mördare": "heavy" }
       },
       {
         id: 6,
         title: "Domen",
-        goal: "MÃ¶t den ultimata sanningen.",
-        text: "Sanningen Ã¤r gÃ¶md i spegeln. Detta Ã¤r slutet pÃ¥ historien. BlÃ¤cket avslÃ¶jar mitt eget ansikte. Det var jag.",
-        manifestationWords: { "sanning": "light", "spegel": "shield", "slut": "gravity", "blÃ¤ck": "rain" }
+        goal: "Möt den ultimata sanningen.",
+        text: "Sanningen är gömd i spegeln. Detta är slutet på historien. Bläcket avslöjar mitt eget ansikte. Det var jag.",
+        manifestationWords: { "sanning": "light", "spegel": "shield", "slut": "gravity", "bläck": "rain" }
       }
     ]
   },
   tr: {
     ui: {
-      points: "Devrim PuanlarÄ±",
-      accuracy: "DoÄŸruluk",
-      progress: "Vaka Ä°lerlemesi",
-      initialize: "SoruÅŸturmayÄ± BaÅŸlat",
-      upgrades: "GeliÅŸtirmeler",
-      restart: "VakayÄ± Yeniden BaÅŸlat",
-      next: "Sonraki BÃ¶lÃ¼m",
-      victory: "Vaka Ã‡Ã¶zÃ¼ldÃ¼",
-      gameover: "SoruÅŸturma SonlandÄ±rÄ±ldÄ±",
-      typewriterMods: "Daktilo ModifikasyonlarÄ±",
-      return: "Vakaya DÃ¶n",
+      points: "Devrim Puanları",
+      accuracy: "Doğruluk",
+      progress: "Vaka İlerlemesi",
+      initialize: "Soruşturmayı Başlat",
+      upgrades: "Geliştirmeler",
+      restart: "Vakayı Yeniden Başlat",
+      next: "Sonraki Bölüm",
+      victory: "Vaka Çözüldü",
+      gameover: "Soruşturma Sonlandırıldı",
+      typewriterMods: "Daktilo Modifikasyonları",
+      return: "Vakaya Dön",
       maxed: "Maksimum",
-      upgrade: "GeliÅŸtir",
-      chapter: "BÃ¶lÃ¼m",
+      upgrade: "Geliştir",
+      chapter: "Bölüm",
       forbidden: "Gizli Dosya",
       audio: "Ses",
       active: "Aktif",
-      initAudio: "EtkinleÅŸtirmek iÃ§in tÄ±kla",
-      langName: "TÃ¼rkÃ§e",
+      initAudio: "Etkinleştirmek için tıkla",
+      langName: "Türkçe",
       detective: "Dedektif",
-      truth: "GerÃ§ek",
-      wrongGuess: "YanlÄ±ÅŸ Adam",
+      truth: "Gerçek",
+      wrongGuess: "Yanlış Adam",
     },
     chapters: [
       {
         id: 1,
         title: "Ceset",
         goal: "Olay yerini incele.",
-        text: "YaÄŸmur kaldÄ±rÄ±mdaki kanÄ± yÄ±kÄ±yor. Cesedi 402 numaralÄ± odada buldum. Åžehrin sessizliÄŸi gibi soÄŸuktu.",
-        manifestationWords: { "yaÄŸmur": "rain", "kan": "blood", "ceset": "ghost", "soÄŸuk": "cold" }
+        text: "Yağmur kaldırımdaki kanı yıkıyor. Cesedi 402 numaralı odada buldum. Şehrin sessizliği gibi soğuktu.",
+        manifestationWords: { "yağmur": "rain", "kan": "blood", "ceset": "ghost", "soğuk": "cold" }
       },
       {
         id: 2,
-        title: "Ä°pucu",
-        goal: "Eksik kanÄ±tÄ± bul.",
-        text: "Åžeridi gÃ¶rmek iÃ§in daha fazla Ä±ÅŸÄ±ÄŸa ihtiyacÄ±m var. Havada garip bir koku var. KaranlÄ±kta bir anahtar bÄ±rakÄ±lmÄ±ÅŸ.",
-        manifestationWords: { "Ä±ÅŸÄ±k": "light", "anahtar": "open", "karanlÄ±k": "ghost", "koku": "tangle" }
+        title: "İpucu",
+        goal: "Eksik kanıtı bul.",
+        text: "Şeridi görmek için daha fazla ışığa ihtiyacım var. Havada garip bir koku var. Karanlıkta bir anahtar bırakılmış.",
+        manifestationWords: { "ışık": "light", "anahtar": "open", "karanlık": "ghost", "koku": "tangle" }
       },
       {
         id: 3,
-        title: "TanÄ±k",
-        goal: "KomÅŸuyu sorgula.",
-        text: "KomÅŸu bir hayalet gibi. Duvarda bir gÃ¶lge gÃ¶rdÃ¼. O gece neler olduÄŸu hakkÄ±nda konuÅŸmamÄ±z lazÄ±m.",
-        manifestationWords: { "hayalet": "ghost", "gÃ¶lge": "wall", "duvar": "wall", "konuÅŸ": "time" }
+        title: "Tanık",
+        goal: "Komşuyu sorgula.",
+        text: "Komşu bir hayalet gibi. Duvarda bir gölge gördü. O gece neler olduğu hakkında konuşmamız lazım.",
+        manifestationWords: { "hayalet": "ghost", "gölge": "wall", "duvar": "wall", "konuş": "time" }
       },
       {
         id: 4,
         title: "Takip",
-        goal: "ÅžÃ¼pheliyi kovala.",
-        text: "HÄ±zlÄ±, sokakta ilerliyor. Her duvar bir engel. Åžehir bir mÃ¼rekkep ve Ã§elik labirenti.",
-        manifestationWords: { "hÄ±zlÄ±": "time", "sokak": "gravity", "duvar": "wall", "mÃ¼rekkep": "rain" }
+        goal: "Şüpheliyi kovala.",
+        text: "Hızlı, sokakta ilerliyor. Her duvar bir engel. Şehir bir mürekkep ve çelik labirenti.",
+        manifestationWords: { "hızlı": "time", "sokak": "gravity", "duvar": "wall", "mürekkep": "rain" }
       },
       {
         id: 5,
-        title: "YanlÄ±ÅŸ Adam",
-        goal: "ÅžÃ¼pheliyi kÃ¶ÅŸeye sÄ±kÄ±ÅŸtÄ±r.",
-        text: "GÃ¶zlerinde ateÅŸ yanÄ±yor. KapÄ±yÄ± kilitleyeceÄŸim. Bu tuzak ev sahibi iÃ§in kuruldu. Katil o olmalÄ±.",
-        manifestationWords: { "ateÅŸ": "fire", "kilit": "shield", "tuzak": "tangle", "katil": "heavy" }
+        title: "Yanlış Adam",
+        goal: "Şüpheliyi köşeye sıkıştır.",
+        text: "Gözlerinde ateş yanıyor. Kapıyı kilitleyeceğim. Bu tuzak ev sahibi için kuruldu. Katil o olmalı.",
+        manifestationWords: { "ateş": "fire", "kilit": "shield", "tuzak": "tangle", "katil": "heavy" }
       },
       {
         id: 6,
         title: "Karar",
-        goal: "Nihai gerÃ§ekle yÃ¼zleÅŸ.",
-        text: "GerÃ§ek aynada gizli. Bu hikayenin sonu. MÃ¼rekkep kendi yÃ¼zÃ¼mÃ¼ ortaya Ã§Ä±karÄ±yor. O bendim.",
-        manifestationWords: { "gerÃ§ek": "light", "ayna": "shield", "son": "gravity", "mÃ¼rekkep": "rain" }
+        goal: "Nihai gerçekle yüzleş.",
+        text: "Gerçek aynada gizli. Bu hikayenin sonu. Mürekkep kendi yüzümü ortaya çıkarıyor. O bendim.",
+        manifestationWords: { "gerçek": "light", "ayna": "shield", "son": "gravity", "mürekkep": "rain" }
       }
     ]
   }
@@ -606,18 +613,18 @@ export default function Game() {
         setTypedText(prev => {
           const next = prev + char;
           
-          const lower = next.toLowerCase();
+          const normalized = normalizeForMatch(next);
 
           // Chapter-specific manifestation words
           Object.entries(chapter.manifestationWords).forEach(([word, type]) => {
-            if (lower.endsWith(word.toLowerCase())) {
+            if (normalized.endsWith(normalizeForMatch(word))) {
               triggerManifestation(type);
             }
           });
 
           // Global keyword effects (rain/water/blood/red/police etc.)
           (Object.keys(KEYWORD_EFFECTS) as KeywordEffectType[]).forEach((effect) => {
-            const match = KEYWORD_EFFECTS[effect].some(word => lower.endsWith(word));
+            const match = KEYWORD_EFFECTS[effect].some(word => normalized.endsWith(normalizeForMatch(word)));
             const now = Date.now();
             if (match && now - keywordCooldownRef.current[effect] > KEYWORD_COOLDOWN_MS) {
               keywordCooldownRef.current[effect] = now;
@@ -703,7 +710,7 @@ export default function Game() {
         }]);
       }
 
-      // Check for victory â€“ only when the player has typed every character and none are wrong
+      // Check for victory – only when the player has typed every character and none are wrong
       if (typedText.length >= chapter.text.length) {
         const allCorrect = typedText.split('').every((ch, idx) => ch === chapter.text[idx]);
         if (allCorrect) {
@@ -911,9 +918,9 @@ export default function Game() {
                 <h2 className="text-2xl font-display uppercase italic text-white">{chapter.goal}</h2>
               </div>
               <p className="text-xl leading-relaxed opacity-80 mb-10 font-light">
-                {chapter.id === 1 ? (lang === 'sv' ? "Staden sover, men brottet vilar aldrig. Din skrivmaskin Ã¤r ditt enda vittne." : lang === 'tr' ? "Åžehir uyuyor ama suÃ§ asla dinlenmez. Daktilon senin tek tanÄ±ÄŸÄ±n." : "The city sleeps, but crime never rests. Your typewriter is your only witness.") : (lang === 'sv' ? "Sanningen kommer fram, bokstav fÃ¶r bokstav." : lang === 'tr' ? "GerÃ§ek ortaya Ã§Ä±kÄ±yor, harf harf." : "The truth emerges, letter by letter.")}
+                {chapter.id === 1 ? (lang === 'sv' ? "Staden sover, men brottet vilar aldrig. Din skrivmaskin är ditt enda vittne." : lang === 'tr' ? "Şehir uyuyor ama suç asla dinlenmez. Daktilon senin tek tanığın." : "The city sleeps, but crime never rests. Your typewriter is your only witness.") : (lang === 'sv' ? "Sanningen kommer fram, bokstav för bokstav." : lang === 'tr' ? "Gerçek ortaya çıkıyor, harf harf." : "The truth emerges, letter by letter.")}
                 <span className="block mt-4 text-[#f27d26] font-bold italic">
-                  "{lang === 'sv' ? "BlÃ¤cket ljuger aldrig." : lang === 'tr' ? "MÃ¼rekkep asla yalan sÃ¶ylemez." : "The ink never lies."}"
+                  "{lang === 'sv' ? "Bläcket ljuger aldrig." : lang === 'tr' ? "Mürekkep asla yalan söylemez." : "The ink never lies."}"
                 </span>
               </p>
               <div className="flex gap-4">
@@ -1043,7 +1050,7 @@ export default function Game() {
             >
               <Skull className="w-24 h-24 text-red-500 mx-auto mb-6 animate-bounce" />
               <h2 className="text-5xl font-display uppercase italic tracking-tighter mb-4 text-white">{t.ui.gameover}</h2>
-              <p className="text-xl mb-10 opacity-80">{lang === 'sv' ? "Du kom fÃ¶r nÃ¤ra sanningen. Fallet Ã¤r stÃ¤ngt fÃ¶r alltid." : lang === 'tr' ? "GerÃ§eÄŸe Ã§ok yaklaÅŸtÄ±n. Vaka sonsuza dek kapandÄ±." : "You got too close to the truth. The case is closed forever."}</p>
+              <p className="text-xl mb-10 opacity-80">{lang === 'sv' ? "Du kom för nära sanningen. Fallet är stängt för alltid." : lang === 'tr' ? "Gerçeğe çok yaklaştın. Vaka sonsuza dek kapandı." : "You got too close to the truth. The case is closed forever."}</p>
               <button 
                 onClick={startChapter}
                 className="w-full px-8 py-5 bg-red-500 text-white font-black uppercase tracking-widest hover:bg-white hover:text-red-500 transition-all rounded-lg"
