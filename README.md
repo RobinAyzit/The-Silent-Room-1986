@@ -163,12 +163,14 @@ SOFTWARE.
 
 </div>
 
-## 👨‍💻 Author
+👨‍💻 **Author**  
+Created 2026 by © nRn World
 
-Created 2026 by **© nRn World**
+📧 bynrnworld@gmail.com
 
-📧 [bynrnworld@gmail.com](mailto:bynrnworld@gmail.com)
+🙏 **Support**  
+If you like this project, consider:
 
-## 🙏 Support
-
-If you like this project, consider to:
+⭐ Starring the project on GitHub  
+☕ Buying me a coffee  
+📢 Sharing with your friends
