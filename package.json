@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://robinayzit.github.io/The-Silent-Room-1986",
+  "homepage": "https://nrn-world.github.io/The-Silent-Room-1986",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
