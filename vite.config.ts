@@ -7,7 +7,7 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
-    base: './',
+    base: '/The-Silent-Room-1986/',
     build: {
       outDir: 'build',
       emptyOutDir: true,
