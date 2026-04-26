@@ -1,10 +1,9 @@
-﻿import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-// background music file URLs (Vite will copy these into the build)
-const menuAudioUrl = new URL('../../Sounds/menu.mp3', import.meta.url).href;
-function chapterAudioUrl(id: number) {
-  return new URL(`../../Sounds/${id}.mp3`, import.meta.url).href;
-}
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, Zap, Droplets, Sun, Unlock, 
@@ -15,8 +14,21 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import confetti from 'canvas-confetti';
 
+// Import our new components
+import GameLoop from './game/GameLoop';
+import TypingInput from './game/TypingInput';
+import UpgradeSystem from './game/UpgradeSystem';
+import SettingsMenu from './game/SettingsMenu';
+import { loadGameState, saveGameState, defaultGameState } from '../utils/persistence';
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// background music file URLs (Vite will copy these into the build)
+const menuAudioUrl = new URL('../../Sounds/menu.mp3', import.meta.url).href;
+function chapterAudioUrl(id: number) {
+  return new URL(`../../Sounds/${id}.mp3`, import.meta.url).href;
 }
 
 // --- Types & Constants ---
@@ -218,13 +230,6 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         goal: "Hörna den misstänkte.",
         text: "Elden brinner i hans ögon. Jag ska låsa dörren. Denna fälla är satt för hyresvärden. Han måste vara mördaren.",
         manifestationWords: { "eld": "fire", "lås": "shield", "fälla": "tangle", "mördare": "heavy" }
-      },
-      {
-        id: 6,
-        title: "Domen",
-        goal: "Möt den ultimata sanningen.",
-        text: "Sanningen är gömd i spegeln. Detta är slutet på historien. Bläcket avslöjar mitt eget ansikte. Det var jag.",
-        manifestationWords: { "sanning": "light", "spegel": "shield", "slut": "gravity", "bläck": "rain" }
       }
     ]
   },
@@ -324,13 +329,13 @@ const GlitchEffect = ({ active }: { active: boolean }) => (
   </AnimatePresence>
 );
 
-export default function Game() {
+function Game() {
   const [lang, setLang] = useState<Language>('en');
   const [chapterIndex, setChapterIndex] = useState(0);
   const [typedText, setTypedText] = useState("");
   const [manifestations, setManifestations] = useState<Manifestation[]>([]);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading'>('narrative');
+  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings'>('narrative');
   const [shake, setShake] = useState(0);
   const [isHeavy, setIsHeavy] = useState(false);
   const [isCold, setIsCold] = useState(false);
@@ -353,15 +358,29 @@ export default function Game() {
     magicRibbon: 0,
     soundProofing: 0
   });
+  const [audioSettings, setAudioSettings] = useState({
+    masterVolume: 0.8,
+    musicVolume: 0.6,
+    sfxVolume: 0.7
+  });
+  const [graphicsSettings, setGraphicsSettings] = useState({
+    particleIntensity: 1.0,
+    screenEffects: true,
+    colorBlindMode: false
+  });
   
-  const t = TRANSLATIONS[lang];
-  const chapter = t.chapters[chapterIndex];
-  const level = chapterIndex + 1;
-  const rank = useMemo(() => Math.max(1, 1 + Math.floor((revolutionPoints + chapterIndex * 180) / 700)), [revolutionPoints, chapterIndex]);
+  // Language change - reset typed text
+  useEffect(() => {
+    setTypedText("");
+  }, [lang]);
+
+  // Chapter change - reset typed text  
+  useEffect(() => {
+    setTypedText("");
+  }, [chapterIndex]);
 
   // Audio Logic
   const audioCtxRef = useRef<AudioContext | null>(null);
-  // HTMLAudioElement reference used for looping background music
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const enemiesRef = useRef<Enemy[]>([]);
   const keywordCooldownRef = useRef<Record<KeywordEffectType, number>>({
@@ -405,7 +424,6 @@ export default function Game() {
       initAudio();
       audioEl.play().catch(() => {});
     } else {
-      // pause on other screens (upgrading, gameover, victory)
       audioEl.pause();
     }
   }, [gameState, chapter.id, initAudio]);
@@ -595,135 +613,6 @@ export default function Game() {
     if (effect === 'wind') pulseState(setWindRush, 1500);
     if (effect === 'dark') pulseState(setDarkFlash, 1800);
   }, [playSound, triggerManifestation]);
-
-  // Typing Logic
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameState !== 'playing') return;
-      
-      if (e.key === 'Backspace') {
-        playSound('backspace');
-        setTypedText(prev => prev.slice(0, -1));
-        return;
-      }
-
-      if (e.key.length === 1) {
-        playSound('click');
-        const char = e.key;
-        setTypedText(prev => {
-          const next = prev + char;
-          
-          const normalized = normalizeForMatch(next);
-
-          // Chapter-specific manifestation words
-          Object.entries(chapter.manifestationWords).forEach(([word, type]) => {
-            if (normalized.endsWith(normalizeForMatch(word))) {
-              triggerManifestation(type);
-            }
-          });
-
-          // Global keyword effects (rain/water/blood/red/police etc.)
-          (Object.keys(KEYWORD_EFFECTS) as KeywordEffectType[]).forEach((effect) => {
-            const match = KEYWORD_EFFECTS[effect].some(word => normalized.endsWith(normalizeForMatch(word)));
-            const now = Date.now();
-            if (match && now - keywordCooldownRef.current[effect] > KEYWORD_COOLDOWN_MS) {
-              keywordCooldownRef.current[effect] = now;
-              triggerKeywordEffect(effect);
-            }
-          });
-
-          return next;
-        });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, chapter, triggerManifestation, triggerKeywordEffect, playSound, lang]);
-
-  // Game Loop
-  useEffect(() => {
-    if (gameState !== 'playing') return;
-
-    const interval = setInterval(() => {
-      setManifestations(prev => prev.filter(m => Date.now() - m.startTime < m.duration));
-
-      // Move enemies
-      setEnemies(prev => {
-        const next = prev.map(e => {
-          if (e.state === 'stunned') return e;
-          let moveSpeed = e.speed;
-          if (isTimeSlowed) moveSpeed *= 0.3;
-          if (isHeavy) moveSpeed *= 0.88;
-          
-          // Censor Effect: Deletes text if close
-          if (e.type === 'censor' && e.x > 78 && Math.random() < 0.04) {
-            setTypedText(t => t.slice(0, -1));
-            playSound('glitch');
-          }
-
-          return { ...e, x: e.x + moveSpeed };
-        }).filter(e => e.health > 0);
-        
-        if (!isShielded && next.some(e => e.x > 85)) {
-          setGameState('gameover');
-        }
-        
-        return next;
-      });
-
-      // Spawn enemies with progressive level/rank scaling
-      const chapterFactor = 1 + (chapterIndex * 0.28);
-      const rankFactor = 1 + ((rank - 1) * 0.1);
-      const spawnRate = Math.min(0.085, 0.0025 * chapterFactor * rankFactor * (1 - upgrades.soundProofing * 0.12));
-      const maxEnemies = 5 + chapterIndex * 2 + Math.floor(rank / 2);
-      if (enemiesRef.current.length < maxEnemies && Math.random() < spawnRate) {
-        const typeRoll = Math.random();
-        let type: Enemy['type'] = 'standard';
-        let health = 62 + chapterIndex * 16 + rank * 5;
-        let speed = 0.06 + chapterIndex * 0.017 + rank * 0.006 + Math.random() * 0.05;
-
-        // Introduce enemy types progressively
-        const activeCensors = enemiesRef.current.filter(e => e.type === 'censor').length;
-        if (level >= 5 && typeRoll > 0.84 && activeCensors < 2) {
-          type = 'censor';
-          speed = 0.07 + (chapterIndex * 0.01);
-          health = 110 + chapterIndex * 12 + rank * 8;
-        } else if (level >= 3 && typeRoll > 0.66) {
-          type = 'infiltrator';
-          speed = 0.1 + chapterIndex * 0.018 + rank * 0.004;
-        } else if (level >= 4 && typeRoll > 0.52) {
-          type = 'heavy';
-          health = 170 + chapterIndex * 20 + rank * 14;
-          speed = 0.05 + chapterIndex * 0.008;
-        }
-
-        setEnemies(prev => [...prev, {
-          id: Math.random().toString(),
-          type,
-          x: 0,
-          y: Math.random() * 60 + 20,
-          health,
-          maxHealth: health,
-          speed,
-          state: 'marching'
-        }]);
-      }
-
-      // Check for victory – only when the player has typed every character and none are wrong
-      if (typedText.length >= chapter.text.length) {
-        const allCorrect = typedText.split('').every((ch, idx) => ch === chapter.text[idx]);
-        if (allCorrect) {
-          setGameState('victory');
-          setRevolutionPoints(prev => prev + (chapter.id * 120) + (rank * 20));
-          playSound('bell');
-          confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
-        }
-      }
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [gameState, typedText, chapter, chapterIndex, level, rank, isHeavy, isTimeSlowed, isShielded, upgrades.soundProofing, playSound]);
 
   const buyUpgrade = (key: keyof Upgrades) => {
     const cost = (upgrades[key] + 1) * 150;
@@ -939,57 +828,38 @@ export default function Game() {
                     {t.ui.upgrades}
                   </button>
                 )}
+                <button 
+                  onClick={() => setGameState('settings')}
+                  className="px-8 py-5 bg-white/10 text-white font-black uppercase tracking-[0.2em] rounded-lg hover:bg-white/20 transition-all"
+                >
+                  ⚙️
+                </button>
               </div>
             </motion.div>
           )}
 
           {gameState === 'upgrading' && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-black/95 p-10 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl mx-auto w-full"
-            >
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-display uppercase italic text-[#f27d26]">{t.ui.typewriterMods}</h2>
-                <div className="text-xl font-bold">{t.ui.points}: {revolutionPoints}</div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                {[
-                  { id: 'oiledKeys', name: 'Oiled Keys', icon: Zap },
-                  { id: 'magicRibbon', name: 'Magic Ribbon', icon: Flame },
-                  { id: 'soundProofing', name: 'Sound Proofing', icon: Shield },
-                ].map((u) => {
-                  const level = upgrades[u.id as keyof Upgrades];
-                  const cost = (level + 1) * 150;
-                  return (
-                    <div key={u.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center text-center">
-                      <u.icon className="w-10 h-10 text-[#f27d26] mb-4" />
-                      <h3 className="text-lg font-bold mb-2">{u.name}</h3>
-                      <div className="flex gap-1 mb-6">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className={cn("w-4 h-1 rounded", i <= level ? "bg-[#f27d26]" : "bg-white/10")} />
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => buyUpgrade(u.id as keyof Upgrades)}
-                        disabled={revolutionPoints < cost || level >= 3}
-                        className="w-full py-2 bg-white/10 rounded font-bold text-xs uppercase hover:bg-[#f27d26] hover:text-black disabled:opacity-30 transition-all"
-                      >
-                        {level >= 3 ? t.ui.maxed : `${t.ui.upgrade} (${cost})`}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+            <UpgradeSystem
+              gameState={gameState}
+              setGameState={setGameState}
+              upgrades={upgrades}
+              setUpgrades={setUpgrades}
+              revolutionPoints={revolutionPoints}
+              setRevolutionPoints={setRevolutionPoints}
+              t={t}
+            />
+          )}
 
-              <button 
-                onClick={() => setGameState('narrative')}
-                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-lg hover:bg-[#f27d26] transition-all"
-              >
-                {t.ui.return}
-              </button>
-            </motion.div>
+          {gameState === 'settings' && (
+            <SettingsMenu
+              gameState={gameState}
+              setGameState={setGameState}
+              t={t}
+              audioSettings={audioSettings}
+              setAudioSettings={setAudioSettings}
+              graphicsSettings={graphicsSettings}
+              setGraphicsSettings={setGraphicsSettings}
+            />
           )}
 
           {gameState === 'playing' && (
@@ -1131,8 +1001,90 @@ export default function Game() {
           <span className="text-[10px] uppercase font-bold tracking-widest">Evidence: Secured</span>
         </div>
       </div>
+
+      {/* Game Loop Component */}
+      <GameLoop
+        lang={lang}
+        chapterIndex={chapterIndex}
+        typedText={typedText}
+        setTypedText={setTypedText}
+        manifestations={manifestations}
+        setManifestations={setManifestations}
+        enemies={enemies}
+        setEnemies={setEnemies}
+        gameState={gameState}
+        setGameState={setGameState}
+        shake={shake}
+        setShake={setShake}
+        isHeavy={isHeavy}
+        setIsHeavy={setIsHeavy}
+        isCold={isCold}
+        setIsCold={setIsCold}
+        isHeat={isHeat}
+        setIsHeat={setIsHeat}
+        isGravity={isGravity}
+        setIsGravity={setIsGravity}
+        isShielded={isShielded}
+        setIsShielded={setIsShielded}
+        isTimeSlowed={isTimeSlowed}
+        setIsTimeSlowed={setIsTimeSlowed}
+        isRaining={isRaining}
+        setIsRaining={setIsRaining}
+        isWaterPulse={isWaterPulse}
+        setIsWaterPulse={setIsWaterPulse}
+        isPoliceAlert={isPoliceAlert}
+        setIsPoliceAlert={setIsPoliceAlert}
+        bloodFlash={bloodFlash}
+        setBloodFlash={setBloodFlash}
+        redFlash={redFlash}
+        setRedFlash={setRedFlash}
+        stormFlash={stormFlash}
+        setStormFlash={setStormFlash}
+        darkFlash={darkFlash}
+        setDarkFlash={setDarkFlash}
+        ghostFog={ghostFog}
+        setGhostFog={setGhostFog}
+        windRush={windRush}
+        setWindRush={setWindRush}
+        revolutionPoints={revolutionPoints}
+        setRevolutionPoints={setRevolutionPoints}
+        upgrades={upgrades}
+        setUpgrades={setUpgrades}
+        chapter={chapter}
+        level={level}
+        rank={rank}
+        playSound={playSound}
+        triggerManifestation={triggerManifestation}
+        triggerKeywordEffect={triggerKeywordEffect}
+        startChapter={startChapter}
+        buyUpgrade={buyUpgrade}
+        t={t}
+        normalizeForMatch={normalizeForMatch}
+        KEYWORD_EFFECTS={KEYWORD_EFFECTS}
+        KEYWORD_COOLDOWN_MS={KEYWORD_COOLDOWN_MS}
+        audioCtxRef={audioCtxRef}
+        bgAudioRef={bgAudioRef}
+        enemiesRef={enemiesRef}
+        keywordCooldownRef={keywordCooldownRef}
+      />
+
+      {/* Typing Input Component */}
+      <TypingInput
+        gameState={gameState}
+        typedText={typedText}
+        setTypedText={setTypedText}
+        chapter={chapter}
+        triggerManifestation={triggerManifestation}
+        triggerKeywordEffect={triggerKeywordEffect}
+        playSound={playSound}
+        t={t}
+        normalizeForMatch={normalizeForMatch}
+        KEYWORD_EFFECTS={KEYWORD_EFFECTS}
+        KEYWORD_COOLDOWN_MS={KEYWORD_COOLDOWN_MS}
+        keywordCooldownRef={keywordCooldownRef}
+      />
     </div>
   );
 }
 
-
+export default Game;
